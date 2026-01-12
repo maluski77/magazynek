@@ -14,42 +14,41 @@ supabase = init_connection()
 # --- Konfiguracja Strony ---
 st.set_page_config(page_title="Magazyn Produkty", layout="wide")
 
-KATEGORIE = ["Elektronika", "Żywność", "Dom i Ogród", "Odzież", "Inne"]
+# Lista opcji dla użytkownika
+LISTA_KATEGORII = ["Elektronika", "Żywność", "Dom i Ogród", "Odzież", "Inne"]
 
-# --- Funkcje Bazy Danych (zmienione na 'produkty') ---
+# --- Funkcje Bazy Danych ---
 
 def pobierz_produkty():
     try:
-        # Zmiana z 'towary' na 'produkty'
-        response = supabase.table("produkty").select("*").execute()
+        # Zmieniono nazwę tabeli na 'Produkty' (zgodnie z Twoim screenem)
+        response = supabase.table("Produkty").select("*").execute()
         return response.data
     except Exception as e:
-        st.error(f"Błąd pobierania: {e}")
+        st.error(f"Błąd pobierania danych: {e}")
         return []
 
 def dodaj_produkt_db(nazwa, kategoria, ilosc, cena):
     nowy_produkt = {
         "nazwa": nazwa,
-        "kategoria": kategoria,
+        "Kategorie": kategoria,  # Zmieniono klucz na 'Kategorie' (zgodnie z prośbą)
         "ilosc": int(ilosc),
         "cena": float(cena)
     }
     try:
-        # Zmiana z 'towary' na 'produkty'
-        supabase.table("produkty").insert(nowy_produkt).execute()
+        supabase.table("Produkty").insert(nowy_produkt).execute()
         st.success(f"Dodano produkt: {nazwa}")
     except Exception as e:
-        st.error(f"Błąd dodawania: {e}")
+        st.error(f"Błąd dodawania do bazy: {e}")
 
 def usun_produkt_db(produkt_id):
     try:
-        # Zmiana z 'towary' na 'produkty'
-        supabase.table("produkty").delete().eq("id", produkt_id).execute()
+        supabase.table("Produkty").delete().eq("id", produkt_id).execute()
         st.success("Produkt usunięty.")
     except Exception as e:
         st.error(f"Błąd usuwania: {e}")
 
-# --- INTERFEJS ---
+# --- INTERFEJS UŻYTKOWNIKA ---
 st.title("🛒 Magazyn Produkty (Supabase)")
 
 st.header("➕ Dodaj Nowy Produkt")
@@ -60,7 +59,8 @@ with st.form("form_dodawania", clear_on_submit=True):
     with col1:
         nazwa_input = st.text_input("Nazwa Produktu")
     with col2:
-        kat_input = st.selectbox("Kategoria", KATEGORIE)
+        # Wybór kategorii z listy
+        kat_input = st.selectbox("Wybierz kategorię", LISTA_KATEGORII)
     with col3:
         ilosc_input = st.number_input("Ilość (szt.)", min_value=1, step=1)
     with col4:
@@ -71,28 +71,4 @@ with st.form("form_dodawania", clear_on_submit=True):
     if submit:
         if nazwa_input:
             dodaj_produkt_db(nazwa_input, kat_input, ilosc_input, cena_input)
-            st.rerun()
-        else:
-            st.error("Podaj nazwę produktu!")
-
-# --- Wyświetlanie Listy ---
-st.header("📋 Stan Magazynu")
-dane = pobierz_produkty()
-
-if not dane:
-    st.info("Baza 'produkty' jest pusta lub nie istnieje.")
-else:
-    cols_h = st.columns([3, 2, 1, 1, 1])
-    for col, h in zip(cols_h, ["Nazwa", "Kategoria", "Ilość", "Cena", "Akcja"]):
-        col.subheader(h)
-
-    for prod in dane:
-        c1, c2, c3, c4, c5 = st.columns([3, 2, 1, 1, 1])
-        c1.write(prod['nazwa'])
-        c2.info(prod['kategoria'])
-        c3.write(prod['ilosc'])
-        c4.write(f"{prod['cena']:.2f}")
-        
-        if c5.button("Usuń", key=f"del_{prod['id']}"):
-            usun_produkt_db(prod['id'])
             st.rerun()

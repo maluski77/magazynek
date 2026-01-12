@@ -4,7 +4,7 @@ import uuid
 
 # --- KONFIGURACJA POŁĄCZENIA ---
 URL = "https://dvdtqcprpjhyltqracgl.supabase.co"
-KEY = "sb_publishable_..." # Tutaj wstaw swój klucz
+KEY = "sb_publishable_dcihPUrxU25U6s3V_1NSwA_Y0_1dXwO" # Tutaj wstaw swój klucz
 
 @st.cache_resource
 def init_connection():

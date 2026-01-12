@@ -1,5 +1,20 @@
 import streamlit as st
 import uuid
+# --- KONFIGURACJA POŁĄCZENIA ---
+# Wklej tutaj swoje dane z panelu Supabase
+URL = "https://dvdtqcprpjhyltqracgl.supabase.co"
+KEY = "sb_publishable_dcihPUrxU25U6s3V_1NSwA_Y0_1dXwO"
+
+@st.cache_resource
+def init_connection():
+    """Inicjalizuje połączenie z bazą danych raz, aby nie powtarzać tego przy każdym odświeżeniu."""
+    return create_client(URL, KEY)
+
+
+
+
+
+
 
 # --- Konfiguracja i Inicjalizacja Stanu Sesji ---
 

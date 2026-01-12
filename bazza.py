@@ -71,4 +71,42 @@ with st.form("form_dodawania", clear_on_submit=True):
 
     submit = st.form_submit_button("Zapisz w bazie danych")
     
-    if
+    if submit:
+        if nazwa_input:
+            dodaj_produkt_db(nazwa_input, kat_input, ilosc_input, cena_input)
+            st.rerun()
+        else:
+            st.error("Nazwa produktu jest wymagana!")
+
+st.divider()
+
+# --- SEKCJA PODGLĄDU I USUWANIA ---
+st.header("📋 Podgląd i Zarządzanie Produktami")
+
+produkty = pobierz_produkty()
+
+if not produkty:
+    st.info("Baza danych jest pusta.")
+else:
+    # Definicja kolumn dla tabeli podglądu
+    c_h = st.columns([3, 2, 1, 1, 1])
+    c_h[0].write("**Nazwa**")
+    c_h[1].write("**Kategoria**")
+    c_h[2].write("**Ilość**")
+    c_h[3].write("**Cena**")
+    c_h[4].write("**Akcja**")
+    
+    st.markdown("---")
+
+    for p in produkty:
+        c1, c2, c3, c4, c5 = st.columns([3, 2, 1, 1, 1])
+        
+        c1.write(p.get('nazwa', '---'))
+        c2.info(p.get('kategorie', 'Brak')) # Pobieranie z kolumny 'kategorie'
+        c3.write(p.get('ilosc', 0))
+        c4.write(f"{p.get('cena', 0.0):.2f}")
+        
+        # Przycisk usuwania z unikalnym ID
+        if c5.button("🗑️ Usuń", key=f"del_{p['id']}"):
+            usun_produkt_db(p['id'])
+            st.rerun()

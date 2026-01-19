@@ -14,7 +14,7 @@ supabase = init_connection()
 # --- KONFIGURACJA STRONY ---
 st.set_page_config(page_title="Magazyn Supabase", layout="wide")
 
-# Baza wymaga liczb (bigint), więc musimy zamienić tekst na ID
+# Mapowanie tekstu na ID dla bazy danych (aby uniknąć błędu bigint)
 MAPA_KATEGORII = {
     "Elektronika": 1,
     "Żywność": 2,
@@ -35,17 +35,14 @@ def pobierz_produkty():
         return []
 
 def dodaj_produkt_db(nazwa, kategoria_tekst, ilosc, cena):
-    # NAPRAWA BŁĘDU BIGINT: pobieramy ID zamiast tekstu
     id_kategorii = MAPA_KATEGORII.get(kategoria_tekst, 5)
-    
     nowy_produkt = {
         "nazwa": nazwa,
-        "kategorie": id_kategorii, # Wysyłamy liczbę
+        "kategorie": id_kategorii,
         "ilosc": int(ilosc),
         "cena": float(cena)
     }
     try:
-        # Próba zapisu
         supabase.table("produkty").insert(nowy_produkt).execute()
         st.success(f"Pomyślnie dodano: {nazwa}")
         st.rerun()
@@ -79,11 +76,8 @@ with st.form("form_dodawania"):
 
     submit = st.form_submit_button("Zapisz w bazie danych")
     
-    if submit:
-        if nazwa_input:
-            dodaj_produkt_db(nazwa_input, kat_input, ilosc_input, cena_input)
-        else:
-            st.error("Nazwa produktu jest wymagana!")
+    if submit and nazwa_input:
+        dodaj_produkt_db(nazwa_input, kat_input, ilosc_input, cena_input)
 
 st.divider()
 
@@ -107,4 +101,16 @@ else:
     for p in produkty:
         c1, c2, c3, c4, c5 = st.columns([3, 2, 1, 1, 1])
         
-        c1.write(p.
+        # Nazwa
+        c1.write(p.get('nazwa', '---'))
+        
+        # Kategoria
+        kat_id = p.get('kategorie')
+        c2.info(f"ID: {kat_id}" if kat_id is not None else "Brak")
+        
+        # Ilość
+        il_val = p.get('ilosc')
+        c3.write(il_val if il_val is not None else 0)
+        
+        # Cena (BEZPIECZNE FORMATOWANIE)
+        cena_raw =

@@ -11,44 +11,50 @@ def init_connection():
 
 supabase = init_connection()
 
-# --- Konfiguracja Strony ---
+# --- KONFIGURACJA STRONY ---
 st.set_page_config(page_title="Magazyn Supabase", layout="wide")
 
-LISTA_KATEGORII = ["Elektronika", "Żywność", "Dom i Ogród", "Odzież", "Inne"]
+# Baza wymaga liczb (bigint), więc musimy zamienić tekst na ID
+MAPA_KATEGORII = {
+    "Elektronika": 1,
+    "Żywność": 2,
+    "Dom i Ogród": 3,
+    "Odzież": 4,
+    "Inne": 5
+}
+LISTA_KATEGORII = list(MAPA_KATEGORII.keys())
 
 # --- FUNKCJE BAZY DANYCH ---
 
 def pobierz_produkty():
     try:
-        # Zmieniono na małe litery 'produkty'
         response = supabase.table("produkty").select("*").execute()
         return response.data
     except Exception as e:
         st.error(f"Błąd pobierania danych: {e}")
         return []
 
-def dodaj_produkt_db(nazwa, kategoria, ilosc, cena):
-    # Upewnij się, że klucze poniżej są identyczne jak nazwy kolumn w Supabase!
+def dodaj_produkt_db(nazwa, kategoria_tekst, ilosc, cena):
+    # NAPRAWA BŁĘDU BIGINT: pobieramy ID zamiast tekstu
+    id_kategorii = MAPA_KATEGORII.get(kategoria_tekst, 5)
+    
     nowy_produkt = {
         "nazwa": nazwa,
-        "kategorie": kategoria, # Używamy małej litery 'kategorie'
+        "kategorie": id_kategorii, # Wysyłamy liczbę
         "ilosc": int(ilosc),
         "cena": float(cena)
     }
     try:
-        response = supabase.table("produkty").insert(nowy_produkt).execute()
-        if response:
-            st.success(f"Pomyślnie dodano: {nazwa}")
-            st.rerun()
+        # Próba zapisu
+        supabase.table("produkty").insert(nowy_produkt).execute()
+        st.success(f"Pomyślnie dodano: {nazwa}")
+        st.rerun()
     except Exception as e:
-        # Wyświetlamy błąd i NIE robimy rerun, żebyś mógł go zobaczyć
         st.error(f"Błąd zapisu w bazie: {e}")
-        st.info("Sprawdź, czy nazwy kolumn w Supabase to: nazwa, kategorie, ilosc, cena")
 
 def usun_produkt_db(id_produktu):
     try:
         supabase.table("produkty").delete().eq("id", id_produktu).execute()
-        st.success("Produkt został usunięty.")
         st.rerun()
     except Exception as e:
         st.error(f"Błąd podczas usuwania: {e}")
@@ -58,7 +64,7 @@ st.title("🛒 System Zarządzania Magazynem")
 
 # --- SEKCJA DODAWANIA ---
 st.header("➕ Dodaj Nowy Produkt")
-with st.form("form_dodawania", clear_on_submit=False): # Zmieniono na False, by dane nie znikały przy błędzie
+with st.form("form_dodawania"):
     col1, col2 = st.columns(2)
     col3, col4 = st.columns(2)
     
@@ -91,7 +97,7 @@ if not produkty:
 else:
     c_h = st.columns([3, 2, 1, 1, 1])
     c_h[0].write("**Nazwa**")
-    c_h[1].write("**Kategoria**")
+    c_h[1].write("**Kategoria (ID)**")
     c_h[2].write("**Ilość**")
     c_h[3].write("**Cena**")
     c_h[4].write("**Akcja**")
@@ -101,12 +107,4 @@ else:
     for p in produkty:
         c1, c2, c3, c4, c5 = st.columns([3, 2, 1, 1, 1])
         
-        c1.write(p.get('nazwa', '---'))
-        # Próba pobrania pod kluczem 'kategorie' (małe litery)
-        kat = p.get('kategorie', 'Brak')
-        c2.info(kat)
-        c3.write(p.get('ilosc', 0))
-        c4.write(f"{p.get('cena', 0.0):.2f}")
-        
-        if c5.button("🗑️ Usuń", key=f"del_{p['id']}"):
-            usun_produkt_db(p['id'])
+        c1.write(p.

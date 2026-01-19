@@ -22,22 +22,26 @@ def pobierz_kategorie_z_bazy():
     Zwraca słownik: {"Nazwa kategorii": ID_kategorii}
     """
     try:
-        # Zakładam, że w tabeli 'kategorie' masz kolumny 'id' oraz 'nazwa'.
-        # Jeśli kolumna nazywa się inaczej (np. 'name'), zmień 'nazwa' poniżej.
         response = supabase.table("kategorie").select("id, nazwa").execute()
         dane = response.data
-        
         if not dane:
             return {}
-            
-        # Tworzymy mapę: Klucz to nazwa, Wartość to ID
-        # np. {'Elektronika': 1, 'Żywność': 2}
         return {item['nazwa']: item['id'] for item in dane}
-        
     except Exception as e:
-        st.error(f"Błąd pobierania kategorii: {e}")
-        st.info("Upewnij się, że tabela 'kategorie' istnieje i ma kolumnę 'nazwa'.")
         return {}
+
+def dodaj_kategorie_db(nazwa_kategorii):
+    """
+    Dodaje nową kategorię do tabeli 'kategorie'.
+    """
+    try:
+        # Wstawiamy samą nazwę, ID powinno nadać się automatycznie (jeśli kolumna id jest serial/identity)
+        supabase.table("kategorie").insert({"nazwa": nazwa_kategorii}).execute()
+        st.success(f"Dodano nową kategorię: {nazwa_kategorii}")
+        st.rerun()
+    except Exception as e:
+        st.error(f"Błąd dodawania kategorii: {e}")
+        st.info("Upewnij się, że tabela 'kategorie' ma kolumnę 'nazwa' i automatyczne ID.")
 
 def pobierz_produkty():
     try:
@@ -50,7 +54,7 @@ def pobierz_produkty():
 def dodaj_produkt_db(nazwa, id_kategorii, ilosc, cena):
     nowy_produkt = {
         "nazwa": nazwa,
-        "kategorie": id_kategorii, # Tutaj wysyłamy poprawne ID pobrane z bazy
+        "kategorie": id_kategorii, 
         "ilosc": int(ilosc),
         "cena": float(cena)
     }
@@ -60,7 +64,7 @@ def dodaj_produkt_db(nazwa, id_kategorii, ilosc, cena):
         st.rerun()
     except Exception as e:
         st.error(f"Błąd zapisu w bazie: {e}")
-        st.warning("Jeśli widzisz błąd 'violates foreign key constraint', oznacza to, że wybrane ID kategorii nie istnieje w tabeli 'kategorie'.")
+        st.warning("Jeśli widzisz błąd constraint, sprawdź czy kategoria istnieje.")
 
 def usun_produkt_db(id_produktu):
     try:
@@ -72,15 +76,31 @@ def usun_produkt_db(id_produktu):
 # --- INTERFEJS UŻYTKOWNIKA ---
 st.title("🛒 System Zarządzania Magazynem")
 
-# POBIERAMY KATEGORIE Z BAZY (DYNAMICZNIE)
+# --- SEKCJA ZARZĄDZANIA KATEGORIAMI (NOWOŚĆ) ---
+with st.expander("📝 Zarządzanie Kategoriami (Dodaj nową)"):
+    col_k1, col_k2 = st.columns([3, 1])
+    with col_k1:
+        nowa_kategoria_input = st.text_input("Wpisz nazwę nowej kategorii (np. Żywność)")
+    with col_k2:
+        # Pusty element dla wyrównania przycisku w dół
+        st.write("") 
+        st.write("")
+        if st.button("Dodaj kategorię"):
+            if nowa_kategoria_input:
+                dodaj_kategorie_db(nowa_kategoria_input)
+            else:
+                st.warning("Wpisz nazwę kategorii przed dodaniem.")
+
+# POBIERAMY KATEGORIE Z BAZY (Po ewentualnym dodaniu nowej)
 mapa_kategorii = pobierz_kategorie_z_bazy()
 
-# --- SEKCJA DODAWANIA ---
+st.divider()
+
+# --- SEKCJA DODAWANIA PRODUKTU ---
 st.header("➕ Dodaj Nowy Produkt")
 
 if not mapa_kategorii:
-    st.error("⚠️ Tabela 'kategorie' w Supabase jest pusta lub nie można jej pobrać!")
-    st.info("Wejdź do Supabase -> Table Editor -> tabela 'kategorie' i dodaj wiersze (np. id:1, nazwa:Elektronika).")
+    st.warning("⚠️ Lista kategorii jest pusta. Użyj panelu powyżej, aby dodać np. 'Żywność'.")
 else:
     with st.form("form_dodawania"):
         col1, col2 = st.columns(2)
@@ -89,7 +109,6 @@ else:
         with col1:
             nazwa_input = st.text_input("Nazwa Produktu")
         with col2:
-            # Dropdown wyświetla nazwy, ale my potrzebujemy ID
             wybrana_nazwa_kat = st.selectbox("Kategoria", list(mapa_kategorii.keys()))
         with col3:
             ilosc_input = st.number_input("Ilość (szt.)", min_value=1, step=1)
@@ -100,7 +119,6 @@ else:
         
         if submit:
             if nazwa_input:
-                # Pobieramy ID na podstawie wybranej nazwy
                 id_do_zapisu = mapa_kategorii[wybrana_nazwa_kat]
                 dodaj_produkt_db(nazwa_input, id_do_zapisu, ilosc_input, cena_input)
             else:
@@ -116,7 +134,6 @@ produkty = pobierz_produkty()
 if not produkty:
     st.info("Baza danych produktów jest pusta.")
 else:
-    # Nagłówki tabeli
     c1, c2, c3, c4, c5 = st.columns([3, 2, 1, 1, 1])
     c1.write("**Nazwa**")
     c2.write("**Kategoria (ID)**")
@@ -129,25 +146,20 @@ else:
     for p in produkty:
         c1, c2, c3, c4, c5 = st.columns([3, 2, 1, 1, 1])
         
-        # Nazwa
         c1.write(p.get('nazwa', '---'))
         
-        # Kategoria
         kat_val = p.get('kategorie')
         c2.info(f"ID: {kat_val}" if kat_val is not None else "Brak")
         
-        # Ilość
         il_val = p.get('ilosc')
         c3.write(il_val if il_val is not None else 0)
         
-        # Cena (bezpieczne wyświetlanie)
         cena_raw = p.get('cena')
         if cena_raw is not None:
             c4.write(f"{float(cena_raw):.2f}")
         else:
             c4.write("0.00")
         
-        # Przycisk usuwania
         p_id = p.get('id')
         if p_id is not None:
             if c5.button("🗑️ Usuń", key=f"del_{p_id}"):

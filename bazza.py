@@ -14,7 +14,7 @@ supabase = init_connection()
 # --- KONFIGURACJA STRONY ---
 st.set_page_config(page_title="Magazyn Supabase", layout="wide")
 
-# Mapowanie tekstu na ID dla bazy danych (aby uniknąć błędu bigint)
+# Mapowanie tekstu na ID dla bazy (kolumna kategorie to bigint)
 MAPA_KATEGORII = {
     "Elektronika": 1,
     "Żywność": 2,
@@ -35,7 +35,9 @@ def pobierz_produkty():
         return []
 
 def dodaj_produkt_db(nazwa, kategoria_tekst, ilosc, cena):
+    # Rozwiązanie błędu bigint: zamieniamy tekst na liczbę ID
     id_kategorii = MAPA_KATEGORII.get(kategoria_tekst, 5)
+    
     nowy_produkt = {
         "nazwa": nazwa,
         "kategorie": id_kategorii,
@@ -70,47 +72,4 @@ with st.form("form_dodawania"):
     with col2:
         kat_input = st.selectbox("Kategoria", LISTA_KATEGORII)
     with col3:
-        ilosc_input = st.number_input("Ilość (szt.)", min_value=1, step=1)
-    with col4:
-        cena_input = st.number_input("Cena (PLN)", min_value=0.0, step=0.01, format="%.2f")
-
-    submit = st.form_submit_button("Zapisz w bazie danych")
-    
-    if submit and nazwa_input:
-        dodaj_produkt_db(nazwa_input, kat_input, ilosc_input, cena_input)
-
-st.divider()
-
-# --- SEKCJA PODGLĄDU I USUWANIA ---
-st.header("📋 Podgląd i Zarządzanie Produktami")
-
-produkty = pobierz_produkty()
-
-if not produkty:
-    st.info("Baza danych jest pusta.")
-else:
-    c_h = st.columns([3, 2, 1, 1, 1])
-    c_h[0].write("**Nazwa**")
-    c_h[1].write("**Kategoria (ID)**")
-    c_h[2].write("**Ilość**")
-    c_h[3].write("**Cena**")
-    c_h[4].write("**Akcja**")
-    
-    st.markdown("---")
-
-    for p in produkty:
-        c1, c2, c3, c4, c5 = st.columns([3, 2, 1, 1, 1])
-        
-        # Nazwa
-        c1.write(p.get('nazwa', '---'))
-        
-        # Kategoria
-        kat_id = p.get('kategorie')
-        c2.info(f"ID: {kat_id}" if kat_id is not None else "Brak")
-        
-        # Ilość
-        il_val = p.get('ilosc')
-        c3.write(il_val if il_val is not None else 0)
-        
-        # Cena (BEZPIECZNE FORMATOWANIE)
-        cena_raw =
+        ilosc_

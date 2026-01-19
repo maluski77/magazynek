@@ -14,7 +14,7 @@ supabase = init_connection()
 # --- KONFIGURACJA STRONY ---
 st.set_page_config(page_title="Magazyn Supabase", layout="wide")
 
-# Mapowanie tekstu na ID dla bazy (kolumna kategorie to bigint)
+# Mapowanie kategorii na ID (Baza wymaga liczb dla typu bigint)
 MAPA_KATEGORII = {
     "Elektronika": 1,
     "Żywność": 2,
@@ -35,7 +35,7 @@ def pobierz_produkty():
         return []
 
 def dodaj_produkt_db(nazwa, kategoria_tekst, ilosc, cena):
-    # Rozwiązanie błędu bigint: zamieniamy tekst na liczbę ID
+    # Naprawa błędu bigint: zamieniamy tekst na liczbę ID przed wysłaniem do Supabase
     id_kategorii = MAPA_KATEGORII.get(kategoria_tekst, 5)
     
     nowy_produkt = {
@@ -72,4 +72,64 @@ with st.form("form_dodawania"):
     with col2:
         kat_input = st.selectbox("Kategoria", LISTA_KATEGORII)
     with col3:
-        ilosc_
+        ilosc_input = st.number_input("Ilość (szt.)", min_value=1, step=1)
+    with col4:
+        cena_input = st.number_input("Cena (PLN)", min_value=0.0, step=0.01, format="%.2f")
+
+    # Dodano przycisk wysyłania (naprawia błąd "Missing Submit Button")
+    submit = st.form_submit_button("Zapisz w bazie danych")
+    
+    if submit:
+        if nazwa_input:
+            dodaj_produkt_db(nazwa_input, kat_input, ilosc_input, cena_input)
+        else:
+            st.error("Nazwa produktu jest wymagana!")
+
+st.divider()
+
+# --- SEKCJA PODGLĄDU I USUWANIA ---
+st.header("📋 Podgląd i Zarządzanie Produktami")
+
+produkty = pobierz_produkty()
+
+if not produkty:
+    st.info("Baza danych jest pusta.")
+else:
+    c_h = st.columns([3, 2, 1, 1, 1])
+    c_h[0].write("**Nazwa**")
+    c_h[1].write("**Kategoria (ID)**")
+    c_h[2].write("**Ilość**")
+    c_h[3].write("**Cena**")
+    c_h[4].write("**Akcja**")
+    
+    st.markdown("---")
+
+    for p in produkty:
+        c1, c2, c3, c4, c5 = st.columns([3, 2, 1, 1, 1])
+        
+        # Nazwa
+        c1.write(p.get('nazwa', '---'))
+        
+        # Kategoria (zabezpieczenie przed None)
+        kat_val = p.get('kategorie')
+        c2.info(f"ID: {kat_val}" if kat_val is not None else "Brak")
+        
+        # Ilość (zabezpieczenie przed None)
+        il_val = p.get('ilosc')
+        c3.write(il_val if il_val is not None else 0)
+        
+        # Cena (naprawa błędu TypeError i SyntaxError)
+        cena_raw = p.get('cena')
+        if cena_raw is not None:
+            try:
+                c4.write(f"{float(cena_raw):.2f}")
+            except:
+                c4.write("0.00")
+        else:
+            c4.write("0.00")
+        
+        # Przycisk usuwania
+        p_id = p.get('id')
+        if p_id is not None:
+            if c5.button("🗑️ Usuń", key=f"del_{p_id}"):
+                usun_produkt_db(p_id)
